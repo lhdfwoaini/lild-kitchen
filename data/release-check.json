@@ -2,11 +2,11 @@
   "schema": "lild-kitchen-release-check-v1",
   "passed": true,
   "visualReview": true,
-  "siteFingerprint": "4698e824f37811d412a434a8581dc188db60aee3b5904796f86c89e725d34e22",
+  "siteFingerprint": "20b716640163bcef16d38f7e8ee2aae6cde8b85ebcdbd93e34df1b6c6d849ad8",
   "viewports": [1440, 768, 390],
-  "browserChecks": 255,
-  "incrementalTests": 10,
+  "browserChecks": 204,
+  "incrementalTests": 11,
   "evidence": ".local/qa/browser.json + .local/reports/incremental-tests.json",
-  "visuallyReviewed": ["desktop-home", "mobile-home", "desktop-recipe-003", "mobile-recipe-003", "desktop-recipe-004", "mobile-recipe-004", "mobile-recipe-004-quick"],
+  "visuallyReviewed": ["desktop-home", "mobile-home", "desktop-recipe-004", "mobile-recipe-004-quick"],
   "publicationStatus": "tracked-in-local-deployment-manifest"
 }

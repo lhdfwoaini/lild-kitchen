@@ -75,6 +75,13 @@ async function scene(width,height,label){
       check(label+'/return-focus',await page.locator('.recipe-card[href="#'+r.id+'"]').evaluate(el=>document.activeElement===el));
     }
     for(const r of recipes){await page.goto(base+'#'+r.id);await page.locator('#recipe-title').waitFor();check(label+'/'+r.id+'/direct',await page.locator('#recipe-title').textContent()===r.name);}
+    for(const r of source.recipes.filter(r=>r.status==='archived')){
+      await page.goto(base+'#'+r.id);await page.locator('.recipe-grid').waitFor();
+      check(label+'/'+r.id+'/archived-not-listed',await page.locator('.recipe-card[href="#'+r.id+'"]').count()===0);
+      check(label+'/'+r.id+'/archived-not-exported',await page.evaluate(id=>!window.KITCHEN_DATA.recipes.some(r=>r.id===id),r.id));
+      await page.reload();await page.locator('.recipe-grid').waitFor();
+      check(label+'/'+r.id+'/archived-refresh-falls-back',await page.locator('#recipe-title').count()===0);
+    }
     check(label+'/no-network-or-script-errors',!errors.length&&!external.length,{errors,external});
     result.passed=true;
   }catch(e){result.error=e.stack;report.errors.push(e.message);await screenshot(page,label+'-failure').catch(()=>{});}

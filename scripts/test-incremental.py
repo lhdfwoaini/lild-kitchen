@@ -109,6 +109,19 @@ class KitchenTests(unittest.TestCase):
             c=k.read(k.local('kitchen.config.json'));c['repository']=repository;k.save(k.local('kitchen.config.json'),c)
             with self.assertRaises(ValueError):k.config()
 
+    def test_archived_recipes_stay_out_after_repeated_sync(self):
+        archived=[r for r in self.old_recipes['recipes'] if r['status']=='archived']
+        for r in archived:self.picture(r['sourceFolder'],name='归档补图.png')
+        k.sync();k.build();k.sync();k.build()
+        current=k.read(k.local('data/recipes.json'))
+        public=json.loads(k.local('assets/recipes.js').read_text('utf8').split('window.KITCHEN_DATA = ',1)[1].rstrip(';\n'))
+        for r in archived:
+            self.assertEqual(next(x for x in current['recipes'] if x['id']==r['id'])['status'],'archived')
+            self.assertNotIn(r['id'],[x['id'] for x in public['recipes']])
+            self.assertNotIn(r['cover'],public['images'])
+            for iid in r['photos']:self.assertNotIn(iid,public['images'])
+        self.assertEqual(self.old_published,k.local(k.PUBLISHED).read_bytes())
+
     def test_corrupt_input_cannot_be_published(self):
         p=k.local('图片/原图/空气炸锅牛扒/坏图.jpg');p.write_bytes(b'broken')
         self.assertTrue(k.scan()['errors'])
