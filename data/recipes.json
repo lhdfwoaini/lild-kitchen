@@ -1,0 +1,60 @@
+{
+  "schema": "lild-kitchen-recipes-v1",
+  "brand": "Lil D Home Kitchen",
+  "title": "我的个人食谱",
+  "description": "把真正做过的菜记下来，下次做饭时，翻开就能照着做。",
+  "recipes": [
+    {
+      "id": "recipe-001",
+      "number": "001",
+      "status": "ready",
+      "name": "空气炸锅牛扒",
+      "subtitle": "配小番茄、口蘑",
+      "description": "牛扒先煎正面，再翻面加入小番茄和口蘑，一起完成。",
+      "sourceFolder": "空气炸锅牛扒",
+      "method": "空气炸锅",
+      "time": { "label": "约 10 分钟", "scope": "recorded-cooking", "minutes": 10 },
+      "record": "人生独立完成的第一道菜",
+      "note": "第一次自己独立做的一道正式的菜。",
+      "ingredients": ["牛扒", "黄油", "食用油", "海盐胡椒粉", "小番茄", "口蘑"],
+      "package": [],
+      "steps": [
+        "在空气炸锅里放一个锡纸烤盘，把牛扒放进去，再放一块黄油，往里面喷一点油。",
+        "撒上一点海盐胡椒粉。",
+        "牛扒正面先煎 6 分钟。",
+        "翻面，撒上一点海盐胡椒粉，再放入几颗小番茄和口蘑，一起煎 4 分钟。总时间约 10 分钟。",
+        "出锅。"
+      ],
+      "quick": ["正面 6 min", "翻面", "加小番茄和口蘑", "4 min", "出锅"],
+      "cover": "r001-cover",
+      "photos": ["r001-main", "r001-detail"]
+    },
+    {
+      "id": "recipe-002",
+      "number": "002",
+      "status": "ready",
+      "name": "快食意大利面",
+      "subtitle": "拌意面做法",
+      "description": "面煮好滤干水分，加入一包意式番茄酱料拌匀即可。",
+      "sourceFolder": "快食意大利面",
+      "method": "快手料理",
+      "time": { "label": "煮面约 1 分钟", "scope": "boiling-only", "minutes": 1 },
+      "record": "人生独立完成的第二道菜",
+      "note": "人生独立完成的第二道菜。",
+      "ingredients": ["1 份面", "1 包意式番茄酱料"],
+      "package": [
+        { "label": "整包产品", "text": "内含 3 份面和 3 份意式番茄酱调料。" },
+        { "label": "每次制作", "text": "使用 1 份面和 1 包意式番茄酱料。" }
+      ],
+      "steps": [
+        "拆开一包面，放进沸水里煮 1 分钟，并搅散。",
+        "捞起意面，滤干水分，放进碗里。",
+        "加入一包意式番茄酱料。",
+        "搅拌均匀即可完成。"
+      ],
+      "quick": ["沸水 1 min", "滤水", "加酱", "拌匀"],
+      "cover": "r002-cover",
+      "photos": ["r002-main"]
+    }
+  ]
+}

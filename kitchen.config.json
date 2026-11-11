@@ -1,0 +1,14 @@
+{
+  "schema": "lild-kitchen-config-v1",
+  "project": "lild-home-kitchen",
+  "sourceRoot": "图片/原图",
+  "displayRoot": "图片/展示图",
+  "output": "dist",
+  "previewPort": 4177,
+  "previewBase": "/kitchen/",
+  "repository": null,
+  "branch": "main",
+  "siteUrl": null,
+  "deployment": "github-pages-actions",
+  "forbiddenRepositories": ["lhdfwoaini/lildphotos"]
+}

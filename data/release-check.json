@@ -1,0 +1,12 @@
+{
+  "schema": "lild-kitchen-release-check-v1",
+  "passed": true,
+  "visualReview": true,
+  "siteFingerprint": "bf3ca66ee586578fe4c9867c89e9167bb9e6d073d9282cda9e42b123b6dac700",
+  "viewports": [1440, 768, 390],
+  "browserChecks": 132,
+  "incrementalTests": 8,
+  "evidence": ".local/qa/browser.json + .local/reports/incremental-tests.json",
+  "visuallyReviewed": ["desktop-home", "mobile-home", "tablet-home", "desktop-recipe-001", "mobile-recipe-001", "desktop-recipe-002", "mobile-recipe-002", "mobile-recipe-001-quick"],
+  "publicationStatus": "not-deployed"
+}

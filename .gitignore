@@ -1,0 +1,13 @@
+.local/
+.local-tools/
+图片/原图/
+data/本地处理记录.json
+data/已发布照片清单.json
+data/drafts.json
+dist/
+__pycache__/
+*.pyc
+.env*
+Thumbs.db
+Desktop.ini
+
