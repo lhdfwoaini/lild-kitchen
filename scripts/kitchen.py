@@ -192,6 +192,8 @@ def validate_data(data, registry):
     images = {i['id']: i for i in registry['images']}
     for r in data['recipes']:
         if not re.fullmatch(r'recipe-[a-z0-9-]+', r['id']): raise ValueError('Unsafe recipe ID')
+        if 'theme' in r and r['theme'] not in ('orange', 'pink', 'forest', 'lime'):
+            raise ValueError(r['id']+' has an unknown visual theme')
         if r['status'] != 'ready': continue
         for key in ('name','ingredients','steps','record','quick','cover'):
             if not r.get(key): raise ValueError(r['id']+' missing '+key)

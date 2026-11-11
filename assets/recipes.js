@@ -6,6 +6,7 @@ window.KITCHEN_DATA = {
   "recipes": [
     {
       "id": "recipe-001",
+      "theme": "orange",
       "number": "001",
       "name": "空气炸锅牛扒",
       "subtitle": "配小番茄、口蘑",
@@ -49,6 +50,7 @@ window.KITCHEN_DATA = {
     },
     {
       "id": "recipe-003",
+      "theme": "forest",
       "number": "003",
       "name": "平底锅煎牛排",
       "subtitle": "黄油与迷迭香增香",
@@ -83,6 +85,7 @@ window.KITCHEN_DATA = {
     },
     {
       "id": "recipe-004",
+      "theme": "lime",
       "number": "004",
       "name": "打抛猪肉碎饭",
       "subtitle": "九层塔肉碎，配米饭和煎蛋",

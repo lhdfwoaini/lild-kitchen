@@ -6,6 +6,7 @@ const {chromium}=require(runtime);
 const release=JSON.parse(fs.readFileSync(path.join(ROOT,'dist/release.json'),'utf8'));
 const source=JSON.parse(fs.readFileSync(path.join(ROOT,'data/recipes.json'),'utf8'));
 const recipes=source.recipes.filter(r=>r.status==='ready');
+const expectedTheme=r=>r.theme||['orange','pink','forest','lime'][Array.from(r.id).reduce((h,c)=>(Math.imul(h,31)+c.codePointAt(0))>>>0,0)%4];
 const registry=JSON.parse(fs.readFileSync(path.join(ROOT,'data/images.json'),'utf8')).images;
 const online=process.argv.includes('--online');
 if(online&&(!config.siteUrl||!config.repository||config.siteUrl!==`https://${config.repository.split('/')[0].toLowerCase()}.github.io/${config.repository.split('/')[1]}/`))throw Error('Unverified online target');
@@ -17,6 +18,77 @@ const norm=t=>t.replace(/\s+/g,'');
 async function screenshot(page,name,fullPage=true){await page.screenshot({path:path.join(output,name+'.png'),fullPage,animations:'disabled'});report.screenshots.push(name+'.png');}
 async function overflow(page,label){const s=await page.evaluate(()=>({viewport:innerWidth,document:document.documentElement.scrollWidth}));check(label+'/overflow',s.document<=s.viewport,s);}
 async function images(page){for(const im of await page.locator('#app img').all()){await im.scrollIntoViewIfNeeded();await im.evaluate(el=>el.decode());check('image-loaded',await im.evaluate(el=>el.naturalWidth>0),await im.getAttribute('src'));}}
+async function contrast(page,selector,label){
+  const samples=await page.locator(selector).evaluateAll(elements=>{
+    const rgb=s=>s.match(/[\d.]+/g).slice(0,3).map(Number);
+    const luminance=s=>rgb(s).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;}).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
+    return elements.filter(el=>el.getClientRects().length).map(el=>{
+      const style=getComputedStyle(el);let ancestor=el,bg;
+      do{bg=getComputedStyle(ancestor).backgroundColor;ancestor=ancestor.parentElement;}while(ancestor&&(bg==='transparent'||bg==='rgba(0, 0, 0, 0)'));
+      const a=luminance(style.color),b=luminance(bg);
+      return {text:el.textContent.slice(0,24),ratio:Number(((Math.max(a,b)+.05)/(Math.min(a,b)+.05)).toFixed(2))};
+    });
+  });
+  check(label+'/text-contrast',samples.length>0&&samples.every(s=>s.ratio>=4.5),samples);
+}
+async function homeDesign(page,label,width){
+  const cards=await page.locator('.recipe-card').evaluateAll(nodes=>nodes.map(el=>{
+    const image=el.querySelector('.card-image'),title=el.querySelector('h3'),im=image.querySelector('img');
+    return {id:el.hash.slice(1),theme:el.dataset.theme,bg:getComputedStyle(el).backgroundColor,title:title.textContent,
+      weight:getComputedStyle(title).fontWeight,fontSize:parseFloat(getComputedStyle(title).fontSize),titleFits:title.scrollWidth<=title.clientWidth+1,
+      ratio:image.clientWidth/image.clientHeight,fit:getComputedStyle(im).objectFit,top:el.offsetTop};
+  }));
+  check(label+'/id-bound-themes',cards.every(c=>c.theme===expectedTheme(recipes.find(r=>r.id===c.id))),cards);
+  check(label+'/uniform-photos-and-readable-titles',cards.every(c=>Math.abs(c.ratio-4/3)<.025&&c.fit==='contain'&&c.titleFits&&Number(c.weight)>=700&&c.fontSize>=20));
+  check(label+'/two-columns',cards.length<2||cards[0].top===cards[1].top);
+  if(width===390)check(label+'/cards-start-in-first-screen',cards[0].top<500,cards[0].top);
+  await contrast(page,'.card-copy h3,.card-subtitle,.card-topline,.image-source,.card-link,.intro-copy,.home-intro h1,.title-highlight,.count,.header-link',label+'/home');
+  const first=page.locator('.recipe-card').first();await first.focus();await page.keyboard.press('Tab');await page.keyboard.press('Shift+Tab');
+  check(label+'/keyboard-focus-visible',await first.evaluate(el=>el.matches(':focus-visible')&&getComputedStyle(el).outlineStyle==='solid'&&parseFloat(getComputedStyle(el).outlineWidth)>=3));
+  await screenshot(page,label+'-keyboard-focus',false);
+  await page.keyboard.press('Enter');await page.locator('#recipe-title').waitFor();await page.goBack();await page.locator('.recipe-grid').waitFor();
+  await page.locator('.recipe-card').first().evaluate(el=>el.blur());
+}
+async function futureDesign(page,label){
+  // In-memory fixture only: no production recipe/photo files are changed.
+  const result=await page.evaluate(()=>{
+    const source=window.KITCHEN_DATA.recipes,original=[...source];
+    const colours=()=>Object.fromEntries([...document.querySelectorAll('.recipe-card')].map(el=>[el.hash,{theme:el.dataset.theme,bg:getComputedStyle(el).backgroundColor}]));
+    const render=()=>window.dispatchEvent(new HashChangeEvent('hashchange'));
+    const before=colours();source.reverse();render();const reversed=colours();
+    const fixture={...original[0],id:'recipe-qa-future',number:'TEST',name:'未来新增菜品长名称验证',theme:undefined};source.push(fixture);render();
+    const defaultTheme=colours()['#recipe-qa-future'];source.reverse();render();const reordered=colours()['#recipe-qa-future'];
+    source.splice(0,source.length,fixture);render();const filtered=colours()['#recipe-qa-future'];
+    fixture.theme='pink';render();const override=colours()['#recipe-qa-future'];
+    source.splice(0,source.length,...original);render();
+    return {stable:Object.keys(before).every(id=>JSON.stringify(before[id])===JSON.stringify(reversed[id])),defaultTheme,reordered,filtered,override};
+  });
+  check(label+'/stable-after-reorder-and-filter',result.stable&&JSON.stringify(result.defaultTheme)===JSON.stringify(result.reordered)&&JSON.stringify(result.defaultTheme)===JSON.stringify(result.filtered),result);
+  check(label+'/future-recipe-and-explicit-theme',!!result.defaultTheme?.bg&&result.override.theme==='pink'&&result.override.bg==='rgb(237, 181, 217)');
+  await page.evaluate(()=>{
+    const data=window.KITCHEN_DATA.recipes;
+    for(const theme of ['orange','pink','forest','lime'])data.push({...data[0],id:'recipe-qa-'+theme,theme});
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+  });
+  await contrast(page,'.recipe-card h3,.card-subtitle,.image-source,.card-link,.card-topline',label+'/all-four-themes');
+  await page.evaluate(()=>{const data=window.KITCHEN_DATA.recipes;data.splice(data.length-4,4);window.dispatchEvent(new HashChangeEvent('hashchange'));});
+  await contrast(page,'.recipe-card h3,.image-source,.card-link',label+'/restored-themes');
+}
+async function narrowAndLargeText(page,label){
+  await page.setViewportSize({width:320,height:844});await overflow(page,label+'/320px-home');
+  check(label+'/320px-single-column',await page.locator('.recipe-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length===1));
+  await screenshot(page,label+'-320-home');
+  await page.setViewportSize({width:390,height:844});await page.evaluate(()=>document.documentElement.style.fontSize='200%');
+  await overflow(page,label+'/200-percent-home');
+  check(label+'/large-text-single-column',await page.locator('.recipe-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length===1));
+  await screenshot(page,label+'-large-text-home');
+  const longest=recipes.reduce((a,b)=>a.ingredients.length>b.ingredients.length?a:b);
+  await page.locator('.recipe-card[href="#'+longest.id+'"]').click();await page.locator('#recipe-title').waitFor();
+  await overflow(page,label+'/200-percent-detail');await screenshot(page,label+'-large-text-detail');
+  await page.evaluate(()=>document.documentElement.style.fontSize='');await page.locator('.back-link').click();
+  await page.emulateMedia({reducedMotion:'reduce'});
+  check(label+'/reduced-motion',await page.locator('.recipe-card').first().evaluate(el=>getComputedStyle(el).transitionDuration==='0s'));
+}
 async function scene(width,height,label){
   const context=await browser.newContext({viewport:{width,height},isMobile:width===390,hasTouch:width===390,deviceScaleFactor:1,locale:'zh-CN'});
   const errors=[];const external=[];
@@ -33,6 +105,7 @@ async function scene(width,height,label){
     check(label+'/recipe-count',await page.locator('.recipe-card').count()===recipes.length);
     check(label+'/displayed-count',Number(await page.locator('.count b').textContent())===recipes.length);
     await images(page);await page.evaluate(()=>scrollTo(0,0));await overflow(page,label+'/home');
+    await homeDesign(page,label,width);await page.mouse.move(0,0);await page.evaluate(()=>scrollTo(0,0));
     await screenshot(page,label+'-home');
     for(const r of recipes){
       const card=page.locator('.recipe-card[href="#'+r.id+'"]');await activate(card);
@@ -45,6 +118,9 @@ async function scene(width,height,label){
       check(label+'/'+r.id+'/quick',JSON.stringify(await page.locator('.quick-flow span').allTextContents())===JSON.stringify(r.quick));
       check(label+'/'+r.id+'/packaging',(await page.locator('.package p').allTextContents()).map(norm).join('|')===r.package.map(x=>norm(x.label+x.text)).join('|'));
       check(label+'/'+r.id+'/real-photo-count',await page.locator('.real-gallery figure').count()===r.photos.length);
+      check(label+'/'+r.id+'/detail-theme',await page.locator('.recipe-detail').getAttribute('data-theme')===expectedTheme(r));
+      check(label+'/'+r.id+'/reading-size',await page.locator('.step p').first().evaluate(el=>parseFloat(getComputedStyle(el).fontSize)>=16));
+      await contrast(page,'.recipe-title h1,.subtitle,.personal-record,.detail-description,.cover-caption,.jump-quick,.ingredients li,.step p,.step-number,.quick-flow,.quick-note h2',label+'/'+r.id);
       await images(page);await overflow(page,label+'/'+r.id);await page.evaluate(()=>scrollTo(0,0));
       await screenshot(page,label+'-'+r.id);
       const trigger=page.locator('.cover-figure button');await activate(trigger);
@@ -82,6 +158,8 @@ async function scene(width,height,label){
       await page.reload();await page.locator('.recipe-grid').waitFor();
       check(label+'/'+r.id+'/archived-refresh-falls-back',await page.locator('#recipe-title').count()===0);
     }
+    await page.goto(base);await page.locator('.recipe-grid').waitFor();await futureDesign(page,label);
+    if(width===390)await narrowAndLargeText(page,label);
     check(label+'/no-network-or-script-errors',!errors.length&&!external.length,{errors,external});
     result.passed=true;
   }catch(e){result.error=e.stack;report.errors.push(e.message);await screenshot(page,label+'-failure').catch(()=>{});}

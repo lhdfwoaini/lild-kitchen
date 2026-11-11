@@ -9,6 +9,16 @@ description: "维护 Lil D Home Kitchen 个人食谱：扫描原图、根据用�
 
 固定目标：公开仓库 `lhdfwoaini/lild-kitchen`，origin `https://github.com/lhdfwoaini/lild-kitchen.git`，分支 `main`，发布方式 GitHub Pages Actions（`.github/workflows/pages.yml`），站点 `https://lhdfwoaini.github.io/lild-kitchen/`。已于2026-11-11独立创建。以后仅更新此仓库，不再创建新仓库；配置/origin不一致时先核实，不覆盖远程或改摄影目标。
 
+## 当前设计约定
+
+遵循 `docs/维护规范.md` 的“简约撞色设计规范”，不要恢复旧衬线/弱色点缀样式。暖白画布、无衬线粗体、整块彩卡，390px与桌面两列，窄屏或放大文字改单列；详情步骤留在暖白阅读区。菜谱数量取 ready 数据，意面 archived 不为凑四张卡重新上架。
+
+`assets/site.css` 与 `assets/site.js` 是源文件；`assets/recipes.js` 必须从源数据生成。可选 `theme` 字段仅允许 orange/pink/forest/lime：001橙、003深绿、004酸橙绿，归档002预留粉色。主题随稳定ID保留；新菜无配置时由渲染器按ID的31倍无符号哈希取四色默认值，禁止用列表位置或随机数。新增菜卡/详情自动沿用统一结构；不可在HTML中写死三张或四张。
+
+现有方形封面在4:3窗口 contain 完整展示，详情主图1:1，实拍保留原比例；不裁掉食物、不为换色重生成或加滤镜。保留来源标记与原图。实际图片需要调整时仍走下述既有图片流程。
+
+视觉改动先保存改版前截图；实现后实际看1440/768/390首页与详情，另查320px和200%文字、四主题对比度、焦点、排序后主题稳定及未来菜卡。将生效的新规则写回既有维护规范、AGENTS和本技能，不另建维护系统。
+
 ## 两种命令
 
 - `$lild-kitchen-update 扫描新增照片并预览变更，不发布`：完成扫描、必要的本地数据/图片更新、构建、检查和预览；不暂存、不提交、不推送、不更新已发布清单。修改前先 backup，最终明确列出本地修改。只有扫描需求而未要求更新时，只 scan 和打开当前预览。

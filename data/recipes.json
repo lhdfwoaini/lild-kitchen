@@ -6,6 +6,7 @@
   "recipes": [
     {
       "id": "recipe-001",
+      "theme": "orange",
       "number": "001",
       "status": "ready",
       "name": "空气炸锅牛扒",
@@ -31,6 +32,7 @@
     },
     {
       "id": "recipe-002",
+      "theme": "pink",
       "number": "002",
       "status": "archived",
       "name": "快食意大利面",
@@ -58,6 +60,7 @@
     },
     {
       "id": "recipe-003",
+      "theme": "forest",
       "number": "003",
       "status": "ready",
       "name": "平底锅煎牛排",
@@ -82,6 +85,7 @@
     },
     {
       "id": "recipe-004",
+      "theme": "lime",
       "number": "004",
       "status": "ready",
       "name": "打抛猪肉碎饭",

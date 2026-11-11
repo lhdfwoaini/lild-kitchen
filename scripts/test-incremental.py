@@ -109,6 +109,19 @@ class KitchenTests(unittest.TestCase):
             c=k.read(k.local('kitchen.config.json'));c['repository']=repository;k.save(k.local('kitchen.config.json'),c)
             with self.assertRaises(ValueError):k.config()
 
+    def test_visual_themes_survive_sync_and_build(self):
+        data=k.read(k.local('data/recipes.json'))
+        expected={r['id']:r.get('theme') for r in data['recipes']}
+        k.sync();k.build();k.sync();k.build()
+        self.assertEqual(expected,{r['id']:r.get('theme') for r in k.read(k.local('data/recipes.json'))['recipes']})
+        public=json.loads(k.local('assets/recipes.js').read_text('utf8').split('window.KITCHEN_DATA = ',1)[1].rstrip(';\n'))
+        self.assertEqual({r['id']:r.get('theme') for r in public['recipes']},{r['id']:expected[r['id']] for r in data['recipes'] if r['status']=='ready'})
+        registry=k.read(k.local('data/images.json'))
+        default=copy.deepcopy(data);default['recipes'][0].pop('theme',None)
+        k.validate_data(default,registry) # Optional: the browser resolves an ID-based default.
+        wrong=copy.deepcopy(data);wrong['recipes'][0]['theme']='random-colour'
+        with self.assertRaises(ValueError):k.validate_data(wrong,registry)
+
     def test_archived_recipes_stay_out_after_repeated_sync(self):
         archived=[r for r in self.old_recipes['recipes'] if r['status']=='archived']
         for r in archived:self.picture(r['sourceFolder'],name='归档补图.png')
