@@ -152,7 +152,7 @@ window.KITCHEN_DATA = {
     "r001-cover": {
       "src": "图片/展示图/r001-cover-1200.webp",
       "width": 1200,
-      "height": 1200,
+      "height": 900,
       "small": "图片/展示图/r001-cover-640.webp",
       "smallWidth": 640,
       "kind": "ai",
@@ -163,7 +163,7 @@ window.KITCHEN_DATA = {
     "r003-cover": {
       "src": "图片/展示图/r003-cover-1200.webp",
       "width": 1200,
-      "height": 1200,
+      "height": 900,
       "small": "图片/展示图/r003-cover-640.webp",
       "smallWidth": 640,
       "kind": "ai",
@@ -175,7 +175,7 @@ window.KITCHEN_DATA = {
     "r004-cover": {
       "src": "图片/展示图/r004-cover-1200.webp",
       "width": 1200,
-      "height": 1200,
+      "height": 900,
       "small": "图片/展示图/r004-cover-640.webp",
       "smallWidth": 640,
       "kind": "ai",

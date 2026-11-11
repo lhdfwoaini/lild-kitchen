@@ -36,11 +36,18 @@ async function homeDesign(page,label,width){
     const image=el.querySelector('.card-image'),title=el.querySelector('h3'),im=image.querySelector('img');
     return {id:el.hash.slice(1),theme:el.dataset.theme,bg:getComputedStyle(el).backgroundColor,title:title.textContent,
       weight:getComputedStyle(title).fontWeight,fontSize:parseFloat(getComputedStyle(title).fontSize),titleFits:title.scrollWidth<=title.clientWidth+1,
-      ratio:image.clientWidth/image.clientHeight,fit:getComputedStyle(im).objectFit,top:el.offsetTop};
+      number:el.querySelector('.recipe-code').textContent,
+      ratio:image.clientWidth/image.clientHeight,nativeRatio:im.naturalWidth/im.naturalHeight,
+      fillsFrame:Math.abs(im.getBoundingClientRect().width-image.getBoundingClientRect().width)<1&&Math.abs(im.getBoundingClientRect().height-image.getBoundingClientRect().height)<1,
+      fit:getComputedStyle(im).objectFit,top:el.offsetTop,left:el.offsetLeft,width:el.clientWidth,
+      bottom:el.querySelector('.card-bottom').getBoundingClientRect().bottom};
   }));
   check(label+'/id-bound-themes',cards.every(c=>c.theme===expectedTheme(recipes.find(r=>r.id===c.id))),cards);
-  check(label+'/uniform-photos-and-readable-titles',cards.every(c=>Math.abs(c.ratio-4/3)<.025&&c.fit==='contain'&&c.titleFits&&Number(c.weight)>=700&&c.fontSize>=20));
-  check(label+'/two-columns',cards.length<2||cards[0].top===cards[1].top);
+  check(label+'/uniform-photos-and-readable-titles',cards.every(c=>Math.abs(c.ratio-4/3)<.025&&Math.abs(c.nativeRatio-4/3)<.005&&c.fillsFrame&&c.fit==='cover'&&c.titleFits&&Number(c.weight)>=700&&c.fontSize>=20),cards);
+  const columns=width>=1100?3:2;
+  check(label+'/responsive-columns',await page.locator('.recipe-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length)===columns,{width,columns});
+  check(label+'/first-row-aligned',cards.slice(0,columns).every(c=>c.top===cards[0].top&&Math.abs(c.bottom-cards[0].bottom)<1),cards);
+  check(label+'/continuous-numbers',cards.every((c,i)=>c.number==='NO. '+String(i+1).padStart(3,'0')),cards.map(c=>({id:c.id,number:c.number})));
   if(width===390)check(label+'/cards-start-in-first-screen',cards[0].top<500,cards[0].top);
   await contrast(page,'.card-copy h3,.card-subtitle,.card-topline,.image-source,.card-link,.intro-copy,.home-intro h1,.title-highlight,.count,.header-link',label+'/home');
   const first=page.locator('.recipe-card').first();await first.focus();await page.keyboard.press('Tab');await page.keyboard.press('Shift+Tab');
@@ -55,16 +62,21 @@ async function futureDesign(page,label){
     const source=window.KITCHEN_DATA.recipes,original=[...source];
     const colours=()=>Object.fromEntries([...document.querySelectorAll('.recipe-card')].map(el=>[el.hash,{theme:el.dataset.theme,bg:getComputedStyle(el).backgroundColor}]));
     const render=()=>window.dispatchEvent(new HashChangeEvent('hashchange'));
-    const before=colours();source.reverse();render();const reversed=colours();
+    const numberSnapshots=[];
+    const numbers=()=>numberSnapshots.push([...document.querySelectorAll('.recipe-code')].map(el=>el.textContent));
+    const before=colours();source.reverse();render();const reversed=colours();numbers();
     const fixture={...original[0],id:'recipe-qa-future',number:'TEST',name:'未来新增菜品长名称验证',theme:undefined};source.push(fixture);render();
-    const defaultTheme=colours()['#recipe-qa-future'];source.reverse();render();const reordered=colours()['#recipe-qa-future'];
-    source.splice(0,source.length,fixture);render();const filtered=colours()['#recipe-qa-future'];
+    const defaultTheme=colours()['#recipe-qa-future'];numbers();source.reverse();render();const reordered=colours()['#recipe-qa-future'];numbers();
+    history.replaceState(null,'','#'+fixture.id);render();const reorderedDetail=document.querySelector('.recipe-title .eyebrow').textContent;
+    history.replaceState(null,'','#home');render();
+    source.splice(0,source.length,fixture);render();const filtered=colours()['#recipe-qa-future'];numbers();
     fixture.theme='pink';render();const override=colours()['#recipe-qa-future'];
     source.splice(0,source.length,...original);render();
-    return {stable:Object.keys(before).every(id=>JSON.stringify(before[id])===JSON.stringify(reversed[id])),defaultTheme,reordered,filtered,override};
+    return {stable:Object.keys(before).every(id=>JSON.stringify(before[id])===JSON.stringify(reversed[id])),defaultTheme,reordered,filtered,override,numberSnapshots,reorderedDetail};
   });
   check(label+'/stable-after-reorder-and-filter',result.stable&&JSON.stringify(result.defaultTheme)===JSON.stringify(result.reordered)&&JSON.stringify(result.defaultTheme)===JSON.stringify(result.filtered),result);
   check(label+'/future-recipe-and-explicit-theme',!!result.defaultTheme?.bg&&result.override.theme==='pink'&&result.override.bg==='rgb(237, 181, 217)');
+  check(label+'/renumbers-after-add-remove-and-reorder',result.numberSnapshots.every(numbers=>numbers.every((n,i)=>n==='NO. '+String(i+1).padStart(3,'0')))&&result.reorderedDetail==='RECIPE 001',result.numberSnapshots);
   await page.evaluate(()=>{
     const data=window.KITCHEN_DATA.recipes;
     for(const theme of ['orange','pink','forest','lime'])data.push({...data[0],id:'recipe-qa-'+theme,theme});
@@ -111,6 +123,8 @@ async function scene(width,height,label){
       const card=page.locator('.recipe-card[href="#'+r.id+'"]');await activate(card);
       await page.locator('#recipe-title').waitFor();
       check(label+'/'+r.id+'/title',await page.locator('#recipe-title').textContent()===r.name);
+      const number=String(recipes.indexOf(r)+1).padStart(3,'0');
+      check(label+'/'+r.id+'/detail-number',await page.locator('.recipe-title .eyebrow').textContent()==='RECIPE '+number&&(await page.locator('.detail-nav > span').textContent()).endsWith('/ '+number));
       check(label+'/'+r.id+'/steps',JSON.stringify((await page.locator('.step p').allTextContents()).map(norm))===JSON.stringify(r.steps.map(norm)));
       check(label+'/'+r.id+'/ingredients',JSON.stringify(await page.locator('.ingredients li').allTextContents())===JSON.stringify(r.ingredients));
       check(label+'/'+r.id+'/record',await page.locator('.personal-record').textContent()===r.record);
@@ -159,6 +173,14 @@ async function scene(width,height,label){
       check(label+'/'+r.id+'/archived-refresh-falls-back',await page.locator('#recipe-title').count()===0);
     }
     await page.goto(base);await page.locator('.recipe-grid').waitFor();await futureDesign(page,label);
+    if(width===1440){
+      for(const [edge,columns] of [[1099,2],[1100,3],[1280,3]]){
+        await page.setViewportSize({width:edge,height});await overflow(page,label+'/'+edge+'px-home');
+        check(label+'/'+edge+'px-columns',await page.locator('.recipe-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length)===columns);
+        check(label+'/'+edge+'px-card-width',await page.locator('.recipe-card').first().evaluate(el=>el.clientWidth>=320));
+        await screenshot(page,label+'-'+edge+'-home');
+      }
+    }
     if(width===390)await narrowAndLargeText(page,label);
     check(label+'/no-network-or-script-errors',!errors.length&&!external.length,{errors,external});
     result.passed=true;

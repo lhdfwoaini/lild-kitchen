@@ -46,7 +46,7 @@ img { display: block; max-width: 100%; height: auto; }
 h1, h2, h3, p, figure { margin: 0; }
 h1, h2, h3 { font-weight: 800; line-height: 1.35; overflow-wrap: anywhere; }
 a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--ink); outline-offset: 5px; }
-.wrap { width: min(1120px, calc(100% - 64px)); margin-inline: auto; }
+.wrap { width: min(1200px, calc(100% - 64px)); margin-inline: auto; }
 .skip-link { position: fixed; z-index: 100; top: 12px; left: 12px; transform: translateY(-160%); padding: 12px 20px; background: var(--lime); border-radius: 8px; font-weight: 700; }
 .skip-link:focus { transform: translateY(0); }
 
@@ -61,7 +61,7 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 3px s
 .site-footer { display: flex; justify-content: space-between; gap: 16px; padding: 28px 0; margin-top: 48px; border-top: 1px solid var(--line); color: var(--muted); font-size: .75rem; }
 .site-footer span:first-child { color: var(--ink); font-weight: 700; }
 
-/* Home: compact introduction, then a two-column collection. */
+/* Home: three generous desktop cards; two on tablets, adaptive on phones. */
 .home-intro { padding: 44px 0 40px; }
 .eyebrow { margin-bottom: 14px; font-size: .6875rem; font-weight: 700; line-height: 1.5; letter-spacing: .14em; }
 .home-intro .eyebrow { color: var(--muted); }
@@ -75,14 +75,15 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 3px s
 .count { color: var(--muted); font-size: .8125rem; white-space: nowrap; }
 .count b { color: var(--ink); font-size: 1rem; margin-right: 3px; }
 .recipe-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
-.recipe-card { display: flex; flex-direction: column; min-width: 0; padding: 20px; border: 1px solid var(--card-border); border-radius: var(--radius); background: var(--card-bg); color: var(--card-ink); transition: transform .2s ease, border-color .2s ease; }
+.recipe-card { display: flex; flex-direction: column; min-width: 0; padding: 18px; border: 1px solid var(--card-border); border-radius: var(--radius); background: var(--card-bg); color: var(--card-ink); transition: transform .2s ease, border-color .2s ease; }
 .recipe-card:focus-visible { outline: 3px solid var(--card-focus); outline-offset: -6px; box-shadow: 0 0 0 3px var(--paper), 0 0 0 6px var(--ink); }
 .card-topline { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 14px; color: var(--card-muted); font-size: .75rem; line-height: 1.5; }
 .recipe-code { font-weight: 700; letter-spacing: .06em; font-variant-numeric: tabular-nums; }
-.card-image { overflow: hidden; aspect-ratio: 4 / 3; border-radius: 11px; background: #E8D9C2; }
-.card-image img { width: 100%; height: 100%; object-fit: contain; transition: transform .3s ease; }
+.card-image { overflow: hidden; aspect-ratio: 4 / 3; border-radius: 11px; background: transparent; }
+/* Native 4:3 covers match this window: no stretching, padding or food crop. */
+.card-image img { width: 100%; height: 100%; object-fit: cover; }
 .card-copy { padding-top: 16px; }
-.card-copy h3 { color: var(--card-title); font-size: clamp(1.25rem, 2.3vw, 2rem); }
+.card-copy h3 { color: var(--card-title); font-size: clamp(1.25rem, 2.3vw, 1.75rem); }
 .card-subtitle { margin-top: 6px; color: var(--card-muted); font-size: .875rem; }
 .card-bottom { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 16px; margin-top: auto; padding-top: 20px; }
 .image-source { font-size: .6875rem; color: var(--card-muted); }
@@ -104,7 +105,7 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 3px s
 .cover-figure { min-width: 0; }
 .photo-button { display: block; position: relative; width: 100%; padding: 0; border: 0; border-radius: 12px; overflow: hidden; background: #E8D9C2; cursor: zoom-in; }
 .photo-button:focus-visible { outline-color: var(--card-focus); }
-.cover-image { width: 100%; aspect-ratio: 1; object-fit: contain; }
+.cover-image { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
 .zoom-label { position: absolute; bottom: 12px; right: 12px; padding: 6px 12px; border-radius: 8px; background: var(--paper); color: var(--ink); font-size: .75rem; font-weight: 600; }
 .cover-caption { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; margin-top: 12px; color: var(--card-muted); font-size: .6875rem; }
 .recipe-title { min-width: 0; padding: 12px 16px 16px 0; }
@@ -163,6 +164,12 @@ dialog::backdrop { background: rgb(21 23 19 / .94); }
 .viewer-close { position: fixed; top: 16px; right: 20px; width: 48px; height: 48px; border: 1px solid var(--paper); border-radius: 50%; background: var(--ink); color: var(--paper); font: 28px/1 var(--sans); z-index: 1; }
 .viewer-close:focus-visible { outline-color: var(--lime); }
 
+@media (min-width: 1100px) {
+  .recipe-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .card-topline { margin-bottom: 12px; }
+  .card-bottom { padding-top: 18px; }
+  .card-link { gap: 12px; }
+}
 @media (max-width: 1000px) {
   .recipe-hero { gap: 24px; }
   .recipe-title { padding-right: 0; }
