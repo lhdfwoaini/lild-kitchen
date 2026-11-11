@@ -6,9 +6,10 @@
   "output": "dist",
   "previewPort": 4177,
   "previewBase": "/kitchen/",
-  "repository": null,
+  "githubOwner": "lhdfwoaini",
+  "repository": "lhdfwoaini/lild-kitchen",
   "branch": "main",
-  "siteUrl": null,
+  "siteUrl": "https://lhdfwoaini.github.io/lild-kitchen/",
   "deployment": "github-pages-actions",
-  "forbiddenRepositories": ["lhdfwoaini/lildphotos"]
+  "forbiddenRepositories": ["lhdfwoaini/lildphotos", "lhdfwoaini/street-corner-darkroom", "lhdfwoaini/thesis-doctor"]
 }

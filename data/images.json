@@ -5,6 +5,8 @@
     { "id": "r001-detail", "recipeId": "recipe-001", "source": "图片/原图/空气炸锅牛扒/空气炸锅的口蘑.jpg", "kind": "real", "alt": "和牛扒一起制作的口蘑实拍细节", "label": "口蘑细节", "focus": "50% 45%" },
     { "id": "r002-main", "recipeId": "recipe-002", "source": "图片/原图/快食意大利面/快食意面.jpg", "kind": "real", "alt": "拌好意式番茄酱料的快食意大利面实拍", "label": "拌好之后", "focus": "50% 55%" },
     { "id": "r001-cover", "recipeId": "recipe-001", "source": ".local/generated/steak.png", "kind": "ai", "alt": "依据实拍重绘的牛扒、小番茄和口蘑展示图", "label": "空气炸锅牛扒", "focus": "50% 50%", "references": ["r001-main", "r001-detail"], "promptId": "steak-v1" },
-    { "id": "r002-cover", "recipeId": "recipe-002", "source": ".local/generated/pasta.png", "kind": "ai", "alt": "依据实拍重绘的快食番茄意面展示图", "label": "快食意大利面", "focus": "50% 50%", "references": ["r002-main"], "promptId": "pasta-v1" }
+    { "id": "r002-cover", "recipeId": "recipe-002", "source": ".local/generated/pasta.png", "kind": "ai", "alt": "依据实拍重绘的快食番茄意面展示图", "label": "快食意大利面", "focus": "50% 50%", "references": ["r002-main"], "promptId": "pasta-v1" },
+    { "id": "r003-cover", "recipeId": "recipe-003", "source": ".local/generated/pan-steak.png", "kind": "ai", "basis": "recipe", "alt": "平底锅煎牛排、黄油和迷迭香的 AI 生成示意图，非实拍", "label": "平底锅煎牛排", "focus": "50% 50%", "promptId": "pan-steak-v1" },
+    { "id": "r004-cover", "recipeId": "recipe-004", "source": ".local/generated/basil-pork-rice.png", "kind": "ai", "basis": "recipe", "alt": "猪肉碎、九层塔、米饭和煎蛋的 AI 生成示意图，非实拍", "label": "打抛猪肉碎饭", "focus": "50% 50%", "promptId": "basil-pork-rice-v1" }
   ]
 }

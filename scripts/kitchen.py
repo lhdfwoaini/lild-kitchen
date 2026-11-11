@@ -200,7 +200,13 @@ def validate_data(data, registry):
     for im in images.values():
         if not re.fullmatch('[a-z0-9-]+', im['id']): raise ValueError('Unsafe image ID')
         if im['kind'] not in ('real','ai','external'): raise ValueError('Unknown provenance')
-        if im['kind'] == 'ai' and (not im.get('references') or any(x not in images for x in im['references'])): raise ValueError('AI image without references')
+        if im['kind'] == 'ai':
+            if not im.get('promptId'): raise ValueError('AI image without prompt provenance')
+            if im.get('basis') == 'recipe':
+                if im.get('references') or im.get('recipeId') not in ids:
+                    raise ValueError('Recipe illustration must identify its recipe, not pretend to have photo references')
+            elif not im.get('references') or any(x not in images or images[x]['kind'] != 'real' or images[x]['recipeId'] != im['recipeId'] for x in im['references']):
+                raise ValueError('AI redrawing without same-recipe real photo references')
         if im['kind'] == 'external' and not im.get('license'): raise ValueError('External image without license')
 
 
@@ -249,6 +255,7 @@ def build():
         large, small = record['variants']['1200'], record['variants']['640']
         image_map[iid] = {**large, 'small':small['src'], 'smallWidth':small['width'],
                           **{k:im[k] for k in ('kind','alt','label','focus')}}
+        if im.get('basis'): image_map[iid]['basis'] = im['basis']
     public = {k:data[k] for k in ('brand','title','description')}
     public['recipes'] = [{k:v for k,v in r.items() if k not in ('sourceFolder','status')} for r in data['recipes'] if r['status']=='ready']
     used = {i for r in public['recipes'] for i in [r['cover'], *r['photos']]}

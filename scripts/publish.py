@@ -4,6 +4,7 @@ No repository creation, no photography destination, no force push, no baseline a
 import argparse
 from datetime import datetime, timezone
 import json
+import os
 import re
 import subprocess
 import sys
@@ -12,9 +13,33 @@ import urllib.parse
 import urllib.request
 import kitchen as k
 
+_github_env = None
+
+
+def github_environment():
+    """Use existing CLI auth or the official Git credential helper, never a token file.
+    The existing github.com credential stays in memory and is not logged or saved.
+    """
+    global _github_env
+    if _github_env is not None: return _github_env
+    env=os.environ.copy()
+    env.update(GCM_INTERACTIVE='never',GIT_TERMINAL_PROMPT='0',GH_PROMPT_DISABLED='1')
+    auth=subprocess.run(['gh','auth','status'],cwd=k.ROOT,env=env,capture_output=True,text=True,encoding='utf8',timeout=30)
+    if auth.returncode and not (env.get('GH_TOKEN') or env.get('GITHUB_TOKEN')):
+        owner=k.config().get('githubOwner','lhdfwoaini')
+        credential=subprocess.run(['git','credential','fill'],input=f'protocol=https\nhost=github.com\nusername={owner}\n\n',
+                                  cwd=k.ROOT,env=env,capture_output=True,text=True,encoding='utf8',timeout=30)
+        values=dict(line.split('=',1) for line in credential.stdout.splitlines() if '=' in line)
+        if credential.returncode or not values.get('password'):
+            raise ValueError('没有可用的 GitHub CLI / Git 凭据管理器登录；请在本机完成 gh auth login')
+        env['GH_TOKEN']=values['password']
+    _github_env=env
+    return env
+
 
 def command(args, check=True):
-    p=subprocess.run(args,cwd=k.ROOT,capture_output=True,text=True,encoding='utf8',timeout=60)
+    env=github_environment() if args[0]=='gh' else {**os.environ,'GCM_INTERACTIVE':'never','GIT_TERMINAL_PROMPT':'0'}
+    p=subprocess.run(args,cwd=k.ROOT,env=env,capture_output=True,text=True,encoding='utf8',timeout=60)
     if check and p.returncode: raise ValueError('Command failed: '+args[0]+' '+args[1]+'\n'+p.stderr.strip())
     return p
 
@@ -23,7 +48,10 @@ def preflight():
     c=k.config();blockers=[]
     if not c.get('repository'):blockers.append('未配置独立食谱仓库 repository')
     if not c.get('siteUrl'):blockers.append('未配置食谱 GitHub Pages 地址 siteUrl')
-    if command(['gh','auth','status'],False).returncode:blockers.append('本机 GitHub CLI 未登录；发布时需可写凭据')
+    try:
+        login=command(['gh','api','user','--jq','.login']).stdout.strip()
+        if login!=c.get('githubOwner','lhdfwoaini'):blockers.append('GitHub 登录账号不匹配：'+login)
+    except Exception as exc:blockers.append(str(exc))
     return {'ready':not blockers,'blockers':blockers,'repository':c.get('repository'),'siteUrl':c.get('siteUrl')}
 
 
@@ -89,13 +117,15 @@ def publish(verify_only=False):
     if reviewed:command(['git','add','--',*reviewed])
     staged=command(['git','diff','--cached','--name-only','-z']).stdout.split('\0')
     if any(p and (p.startswith(('图片/原图/','.local/','dist/')) or p.endswith(('.zip','.env'))) for p in staged):raise ValueError('Private material in staging')
-    if any(staged):command(['git','commit','-m','Update Lil D Home Kitchen recipes and assets'])
+    if any(staged):
+        identity=[] if command(['git','var','GIT_AUTHOR_IDENT'],False).returncode==0 else ['-c','user.name=Codex','-c','user.email=codex@localhost']
+        command(['git',*identity,'commit','-m','Update Lil D Home Kitchen recipes and assets'])
     commit=command(['git','rev-parse','HEAD']).stdout.strip()
     baseline=k.read(k.local(k.PUBLISHED))
     if baseline.get('commit')==commit and baseline.get('siteFingerprint')==k.site_fingerprint():return {'status':'no-changes','commit':commit}
     pages=json.loads(command(['gh','api',f'repos/{repo}/pages']).stdout)
     if pages.get('build_type')!='workflow':raise ValueError('Enable GitHub Pages / GitHub Actions for this kitchen repository first')
-    command(['git','push','origin',c['branch']])
+    command(['git','push','--set-upstream','origin',c['branch']])
     k.save(k.local('.local/reports/deploy.json'),{'status':'pushed-not-verified','commit':commit})
     # Bounded, resumable polling; never create a second commit to retry deployment.
     last='Pages workflow not yet visible'

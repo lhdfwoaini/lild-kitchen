@@ -46,8 +46,8 @@ class KitchenTests(unittest.TestCase):
         shutil.copy2(p,p.with_name('同图别名.png'))
         k.sync();k.build()
         now=k.read(k.local('data/recipes.json'))
-        self.assertEqual(len(now['recipes']),2)
-        self.assertEqual(len(now['recipes'][0]['photos']),3)
+        self.assertEqual(len(now['recipes']),len(self.old_recipes['recipes']))
+        self.assertEqual(len(now['recipes'][0]['photos']),len(self.old_recipes['recipes'][0]['photos'])+1)
         for old,new in zip(self.old_recipes['recipes'],now['recipes']):
             self.assertEqual({x:v for x,v in old.items() if x!='photos'},{x:v for x,v in new.items() if x!='photos'})
         self.assertEqual(k.build()['images_generated'],[])
@@ -84,9 +84,30 @@ class KitchenTests(unittest.TestCase):
             old_html=z.read('index.html').decode('utf8')
             old_steps=re.findall(r'<li class="step">.*?<p>(.*?)</p>',old_html,re.S)
             clean=lambda x:re.sub(r'\s+','',re.sub('<[^>]+>','',x))
-            self.assertEqual([clean(x) for x in old_steps],[clean(x) for r in self.old_recipes['recipes'] for x in r['steps']])
+            self.assertEqual([clean(x) for x in old_steps],[clean(x) for r in self.old_recipes['recipes'] if r['id'] in ('recipe-001','recipe-002') for x in r['steps']])
             for im in k.read(k.local('data/images.json'))['images']:
-                if im['kind']=='real': self.assertEqual(z.read(Path(im['source']).name),k.local(im['source']).read_bytes())
+                if im['kind']=='real' and Path(im['source']).name in z.namelist(): self.assertEqual(z.read(Path(im['source']).name),k.local(im['source']).read_bytes())
+
+    def test_recipe_illustrations_are_honest_and_stable(self):
+        registry=k.read(k.local('data/images.json'))
+        data=k.read(k.local('data/recipes.json'))
+        for rid in ('recipe-003','recipe-004'):
+            recipe=next(r for r in data['recipes'] if r['id']==rid)
+            image=next(i for i in registry['images'] if i['id']==recipe['cover'])
+            self.assertEqual(image['basis'],'recipe')
+            self.assertFalse(image.get('references'))
+            self.assertNotIn('time',recipe)
+        k.sync();k.sync();k.build();k.build()
+        self.assertEqual(data,k.read(k.local('data/recipes.json')))
+        self.assertEqual(registry,k.read(k.local('data/images.json')))
+        wrong=copy.deepcopy(registry)
+        next(i for i in wrong['images'] if i['id']=='r003-cover')['references']=['r001-main']
+        with self.assertRaises(ValueError):k.validate_data(data,wrong)
+
+    def test_protected_repositories_are_rejected(self):
+        for repository in ('lhdfwoaini/lildphotos','lhdfwoaini/street-corner-darkroom','lhdfwoaini/thesis-doctor'):
+            c=k.read(k.local('kitchen.config.json'));c['repository']=repository;k.save(k.local('kitchen.config.json'),c)
+            with self.assertRaises(ValueError):k.config()
 
     def test_corrupt_input_cannot_be_published(self):
         p=k.local('图片/原图/空气炸锅牛扒/坏图.jpg');p.write_bytes(b'broken')

@@ -6,7 +6,10 @@ const {chromium}=require(runtime);
 const release=JSON.parse(fs.readFileSync(path.join(ROOT,'dist/release.json'),'utf8'));
 const source=JSON.parse(fs.readFileSync(path.join(ROOT,'data/recipes.json'),'utf8'));
 const recipes=source.recipes.filter(r=>r.status==='ready');
-const output=path.join(ROOT,'.local/qa');fs.mkdirSync(output,{recursive:true});
+const registry=JSON.parse(fs.readFileSync(path.join(ROOT,'data/images.json'),'utf8')).images;
+const online=process.argv.includes('--online');
+if(online&&(!config.siteUrl||!config.repository||config.siteUrl!==`https://${config.repository.split('/')[0].toLowerCase()}.github.io/${config.repository.split('/')[1]}/`))throw Error('Unverified online target');
+const output=path.join(ROOT,online?'.local/qa-online':'.local/qa');fs.mkdirSync(output,{recursive:true});
 const report={passed:false,siteFingerprint:release.siteFingerprint,scenarios:[],checks:[],errors:[],screenshots:[]};
 let browser,server,base;
 function check(name,passed,evidence){report.checks.push({name,passed:!!passed,evidence});if(!passed)throw Error(name+': '+JSON.stringify(evidence));}
@@ -28,6 +31,7 @@ async function scene(width,height,label){
   try{
     await page.goto(base);await page.locator('.recipe-card').first().waitFor();
     check(label+'/recipe-count',await page.locator('.recipe-card').count()===recipes.length);
+    check(label+'/displayed-count',Number(await page.locator('.count b').textContent())===recipes.length);
     await images(page);await page.evaluate(()=>scrollTo(0,0));await overflow(page,label+'/home');
     await screenshot(page,label+'-home');
     for(const r of recipes){
@@ -45,16 +49,21 @@ async function scene(width,height,label){
       await screenshot(page,label+'-'+r.id);
       const trigger=page.locator('.cover-figure button');await activate(trigger);
       await page.locator('#photo-dialog').waitFor({state:'visible'});await page.locator('#photo-full').evaluate(el=>el.decode());
-      check(label+'/ai-label',(await page.locator('#photo-caption').textContent()).includes('AI 重绘展示图'));
+      const cover=registry.find(im=>im.id===r.cover);
+      const provenance=cover.kind==='ai'?(cover.basis==='recipe'?'AI 生成示意图':'AI 重绘展示图'):'实拍记录';
+      check(label+'/'+r.id+'/source-label',(await page.locator('#photo-caption').textContent()).includes(provenance));
+      if(cover.basis==='recipe')check(label+'/'+r.id+'/illustration-disclosure',(await page.locator('.cover-caption').textContent()).includes('非实拍'));
       await page.keyboard.press('Tab');check(label+'/focus-contained',await page.evaluate(()=>document.activeElement.closest('dialog')!==null));
       await page.keyboard.press('Escape');await page.locator('#photo-dialog').waitFor({state:'hidden'});
       check(label+'/focus-restored',await trigger.evaluate(el=>document.activeElement===el));
       await activate(trigger);await activate(page.locator('.viewer-close'));await page.locator('#photo-dialog').waitFor({state:'hidden'});
       await activate(trigger);await page.mouse.click(3,80);await page.locator('#photo-dialog').waitFor({state:'hidden'});
-      const real=page.locator('.real-gallery button').first();await activate(real);
-      await page.locator('#photo-dialog').waitFor({state:'visible'});await page.locator('#photo-full').evaluate(el=>el.decode());
-      check(label+'/real-label',(await page.locator('#photo-caption').textContent()).includes('实拍记录'));
-      await page.keyboard.press('Escape');
+      if(r.photos.length){
+        const real=page.locator('.real-gallery button').first();await activate(real);
+        await page.locator('#photo-dialog').waitFor({state:'visible'});await page.locator('#photo-full').evaluate(el=>el.decode());
+        check(label+'/real-label',(await page.locator('#photo-caption').textContent()).includes('实拍记录'));
+        await page.keyboard.press('Escape');
+      }else check(label+'/'+r.id+'/no-fake-photo-section',await page.locator('.real-record').count()===0);
       await activate(page.locator('.jump-quick'));await page.waitForFunction(()=>document.activeElement.id==='quick-note');
       await page.locator('#quick-note').scrollIntoViewIfNeeded();await overflow(page,label+'/quick');
       await screenshot(page,label+'-'+r.id+'-quick',false);
@@ -73,8 +82,12 @@ async function scene(width,height,label){
 }
 (async()=>{
   try{
-    server=createServer();await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});
-    base='http://127.0.0.1:'+server.address().port+config.previewBase;
+    if(online)base=config.siteUrl;
+    else{
+      server=createServer();await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});
+      base='http://127.0.0.1:'+server.address().port+config.previewBase;
+    }
+    report.url=base;report.mode=online?'public-pages':'local-subpath';
     const executablePath=['C:/Program Files/Google/Chrome/Application/chrome.exe','C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'].find(fs.existsSync);
     browser=await chromium.launch({executablePath,headless:true,chromiumSandbox:true,timeout:20000,ignoreDefaultArgs:['--unsafely-disable-devtools-self-xss-warnings','--enable-unsafe-swiftshader','--disable-ipc-flooding-protection','--disable-popup-blocking','--disable-client-side-phishing-detection']});
     for(const size of [[1440,1000,'desktop'],[768,1024,'tablet'],[390,844,'mobile']])await scene(...size);
